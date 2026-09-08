@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-local-assistant"
+version = "0.1.0"
+description = "Experimental local assistant integration; separately installed model required"
+readme = "README.md"
+requires-python = ">=3.14"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+dependencies = ["httpx>=0.28.1,<1", "pydantic>=2.13.4,<3"]
+
+[project.optional-dependencies]
+research = ["torch>=2.11.0"]
+test = ["pytest>=9.1.1,<10"]
+
+[project.scripts]
+hermes = "hermes_local.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["hermes_local*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

@@ -1,41 +1,76 @@
-# Hermes Local — experimental, release preparation
+# Hermes Local — experimental developer preview
 
-Hermes Local is a local-assistant integration being extracted from Olympus.
-The current development implementation uses a separately installed Ollama base
-model. It is **not** a trained Hermes 12B checkpoint, and this repository does not
-currently contain an installable release or model weights.
+A runnable terminal assistant integration powered by a separately installed Ollama
+model. **Not an independently trained Hermes 12B model, not production-qualified,
+and not a browser application.** No model weights are bundled.
 
-## What has been demonstrated
+## License first
 
-In the developer's Olympus checkout, the terminal integration streamed real
-responses using `qwen3:0.6b`, retained a word across two conversation turns, and
-supported clearing and exiting the conversation. It includes explicit base-model
-selection, model-digest checks and incomplete-stream handling.
+This source retains the Olympus Proprietary License. Public visibility does not
+grant permission to copy, modify or redistribute it. Installation/use instructions
+below are for the copyright holder or users with separate written permission.
+This is not an open-source or generally licensed public-use release. The maintainer
+must authorize broader usage before promoting it as one.
 
-These are integration smoke checks, not independent capability or safety evaluations.
-The successful Qwen3 run does not establish the intelligence of a new Hermes model.
-The parent checkout's test results are not certification of this new repository.
+## Installation (authorized users)
 
-## What is not released
+Requires Python 3.14+, pip, and a separately installed Ollama runtime.
+Chat does not require PyTorch. Tested on macOS; other environments are unverified.
 
-- Standalone installable source/package and clean-machine verification.
-- A trained or fine-tuned Hermes checkpoint.
-- Generative document-grounding with verified citations.
-- A browser chat application or hosted service.
-- Production, safety, general-intelligence or publication qualification.
+```sh
+git clone https://github.com/build-the-future-11/hermes-local.git
+cd hermes-local
+python3.14 -m venv .venv
+.venv/bin/python -m pip install .
+ollama serve
+```
 
-## Release conditions
+In another terminal, acquire a model under its publisher's terms, then run:
 
-Before a usable release, the maintainer must approve code licensing, extract and
-test the standalone implementation, document supported hardware and setup, and
-publish versioned artifacts with accurate limitations. Model weights are acquired
-separately under their publisher's license; none are redistributed here.
+```sh
+ollama pull qwen3:0.6b
+.venv/bin/hermes doctor --model qwen3:0.6b
+.venv/bin/hermes chat --model qwen3:0.6b
+```
 
-This repository is public for transparency during preparation. **Public visibility
-is not a claim of launch readiness and does not grant a software license.** No
-additional rights to the Olympus implementation are granted by this README.
+The example downloads roughly 523 MB. See the
+[official model listing](https://ollama.com/library/qwen3:0.6b) for details and license.
+The base model is third-party software, not Hermes weights. No paid API is required.
+Choose a model that fits your available memory; no universal hardware guarantee is made.
 
-The proposed initial product is an experimental assistant powered by a named
-third-party base model, not an independently pretrained model. See the
-[parent project](https://github.com/build-the-future-11/olympus-cognitive-architecture)
-for the broader research context; development changes may not yet be published there.
+Use `--base-url http://127.0.0.1:11435` for a separately configured local instance.
+An Ollama API address is not a chat website.
+
+## Behavior and limits
+
+- Streamed multi-turn terminal chat; `/clear`, `/exit`, Ctrl-C/EOF.
+- Explicit model selection and before/after digest checks; no silent fallback.
+- Bounded history with visible omission notices; conservative byte budgeting,
+  not an exact tokenizer calculation.
+- Failed/incomplete streams are not saved to history. Displayed partial text must
+  be discarded on failure. Client disconnect does not certify immediate server cancellation.
+- No application conversation persistence or tool execution. Backend logging is separate.
+- Remote backend selection sends conversation contents there; HTTPS is required.
+- Chat answers are not document-verified and may be incorrect.
+
+## Full Hermes research source
+
+`hermes_local/grounding.py` includes the extractive grounding service, trainable
+heads and workspace runtime. `substrate.py` and `core.py` supply their original
+typed support contracts. These are experimental components, not trained weights.
+
+```sh
+.venv/bin/python -m pip install '.[research,test]'
+.venv/bin/python -m pytest
+```
+
+The grounding service is separate from generative chat. Generative citation
+validation, model qualification, independent evaluation, durable installation
+management and a browser UI are not included.
+
+## Provenance
+
+Extracted from the owner's Olympus development checkout. Original modules were
+preserved with package imports remapped; a standalone CLI and packaging were added.
+Parent-project test counts do not certify this repository. See `VERIFICATION.md`
+for checks actually run on this extraction.
