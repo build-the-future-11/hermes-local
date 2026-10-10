@@ -15,7 +15,8 @@ def test_streaming_commits_only_complete_turns(complete: bool) -> None:
         assert json.loads(request.content)["stream"] is True
         events = [{"model": "base", "message": {"content": "Hello"}, "done": False}]
         if complete:
-            events.append({"model": "base", "message": {"content": " world"}, "done": True})
+            events.append({"model": "base", "message": {"content": " world"},
+                           "done": True, "done_reason": "stop"})
         return httpx.Response(200, text="\n".join(json.dumps(event) for event in events))
 
     session = HermesChat(OllamaClient(transport=httpx.MockTransport(handle)), "base")

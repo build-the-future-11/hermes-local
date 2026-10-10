@@ -43,7 +43,12 @@ class OllamaClient:
             is_loopback = parsed.hostname.casefold().rstrip(".") == "localhost"
         if parsed.scheme == "http" and not is_loopback:
             raise ValueError("remote Ollama endpoints require HTTPS")
-        if not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0:
+        if (
+            isinstance(self.timeout_seconds, bool)
+            or not isinstance(self.timeout_seconds, (int, float))
+            or not math.isfinite(self.timeout_seconds)
+            or self.timeout_seconds <= 0
+        ):
             raise ValueError("timeout_seconds must be finite and positive")
 
     def _request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
@@ -62,7 +67,10 @@ class OllamaClient:
 
     def list_models(self) -> list[str]:
         payload = self._request("GET", "/api/tags")
-        models = payload.get("models")
+        return self._model_names(payload.get("models"))
+
+    @staticmethod
+    def _model_names(models: Any) -> list[str]:
         if not isinstance(models, list):
             raise ValueError("Ollama model list is malformed")
         names: list[str] = []
@@ -95,8 +103,7 @@ class OllamaClient:
             raise ValueError("Ollama model name is malformed")
         payload = self._request("GET", "/api/tags")
         models = payload.get("models")
-        if not isinstance(models, list):
-            raise ValueError("Ollama model list is malformed")
+        self._model_names(models)
         for model in models:
             if isinstance(model, dict) and model.get("name") == name:
                 digest = model.get("digest")
@@ -123,6 +130,20 @@ class OllamaClient:
         models = self.list_models()
         return {"status": "ok", "provider": "ollama", "models": models}
 
+    @staticmethod
+    def _completion_reason(payload: dict[str, Any]) -> str:
+        if payload.get("done") is not True:
+            raise ValueError("Ollama chat response ended without explicit completion")
+        reason = payload.get("done_reason")
+        if reason not in ("stop", "length"):
+            raise ValueError("Ollama chat response has missing or unsupported done_reason")
+        return reason
+
+    @staticmethod
+    def _bounded_integer(value: Any, name: str, minimum: int, maximum: int) -> None:
+        if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
+            raise ValueError(f"{name} must be an integer between {minimum} and {maximum}")
+
     def generate(
         self,
         *,
@@ -136,25 +157,34 @@ class OllamaClient:
         history: list[dict[str, str]] | None = None,
         on_token: Callable[[str], None] | None = None,
     ) -> GenerationResult:
-        if not model.strip():
+        if not isinstance(model, str) or not model.strip() or model != model.strip():
             raise ValueError("model is required")
-        if not prompt.strip():
+        if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt is required")
-        if not 1 <= max_tokens <= 4_096:
-            raise ValueError("max_tokens must be between 1 and 4096")
-        if not 256 <= context_tokens <= 131_072:
-            raise ValueError("context_tokens must be between 256 and 131072")
-        if not 0 <= temperature <= 2:
+        if system is not None and not isinstance(system, str):
+            raise ValueError("system must be text")
+        self._bounded_integer(max_tokens, "max_tokens", 1, 4_096)
+        self._bounded_integer(context_tokens, "context_tokens", 256, 131_072)
+        if (
+            isinstance(temperature, bool)
+            or not isinstance(temperature, (int, float))
+            or not math.isfinite(temperature)
+            or not 0 <= temperature <= 2
+        ):
             raise ValueError("temperature must be between 0 and 2")
-        if seed is not None and not 0 <= seed <= 2**32 - 1:
-            raise ValueError("seed must be between 0 and 2^32-1")
+        if seed is not None:
+            self._bounded_integer(seed, "seed", 0, 2**32 - 1)
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         if history:
             for index, turn in enumerate(history):
                 expected = "user" if index % 2 == 0 else "assistant"
-                if set(turn) != {"role", "content"} or turn["role"] != expected:
+                if (
+                    not isinstance(turn, dict)
+                    or set(turn) != {"role", "content"}
+                    or turn["role"] != expected
+                ):
                     raise ValueError("history must contain alternating user/assistant turns")
                 if not isinstance(turn["content"], str) or not turn["content"].strip():
                     raise ValueError("history contains empty content")
@@ -179,25 +209,27 @@ class OllamaClient:
         else:
             payload = self._stream_chat(request_body, model, on_token)
         message = payload.get("message")
-        if not isinstance(message, dict) or not isinstance(message.get("content"), str):
+        if (
+            "error" in payload
+            or not isinstance(message, dict)
+            or not isinstance(message.get("content"), str)
+            or message.get("role", "assistant") != "assistant"
+        ):
             raise ValueError("Ollama chat response is malformed")
         provider_model = payload.get("model")
         if provider_model != model:
             raise ValueError("Ollama chat response model does not match the request")
-        done = payload.get("done")
-        if not isinstance(done, bool):
-            raise ValueError("Ollama chat response has malformed completion status")
-        done_reason = payload.get("done_reason")
-        if done_reason is not None and not isinstance(done_reason, str):
-            raise ValueError("Ollama chat response has malformed done_reason")
+        done_reason = self._completion_reason(payload)
         total_duration = self._optional_nonnegative_integer(payload, "total_duration")
         eval_count = self._optional_nonnegative_integer(payload, "eval_count")
         load_duration = self._optional_nonnegative_integer(payload, "load_duration")
         content = message["content"]
+        if len(content.encode("utf-8")) > 1_048_576:
+            raise ValueError("generation response exceeds output limit")
         return GenerationResult(
             model=model,
             content=content,
-            finish_reason="length" if not done or done_reason == "length" else "stop",
+            finish_reason=done_reason,
             prompt_characters=len(prompt),
             generated_characters=len(content),
             evidence={
@@ -228,8 +260,15 @@ class OllamaClient:
                     message = payload.get("message")
                     if ("error" in payload or not isinstance(message, dict)
                             or not isinstance(message.get("content"), str)
+                            or message.get("role", "assistant") != "assistant"
                             or not isinstance(payload.get("done"), bool)):
                         raise ValueError("malformed generation stream")
+                    if payload["done"]:
+                        self._completion_reason(payload)
+                        for field in ("total_duration", "eval_count", "load_duration"):
+                            self._optional_nonnegative_integer(payload, field)
+                    elif payload.get("done_reason") not in (None, ""):
+                        raise ValueError("unfinished stream event includes a completion reason")
                     content = message["content"]
                     size += len(content.encode("utf-8"))
                     if size > 1_048_576:
