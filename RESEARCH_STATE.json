@@ -42,6 +42,19 @@
         "inherited": 58
       },
       "review": "wave3_methods independently repeated 96 tests and four HTTP-error/ReadError closure probes"
+    },
+    {
+      "event": "Exact published code passed hosted verification",
+      "code_commit": "24e9ce2226759ece85a3651089ae6792eac64e03",
+      "pull_request": "https://github.com/build-the-future-11/hermes-local/pull/3",
+      "workflow_runs": {
+        "Standalone verification": 38029593834
+      },
+      "result": "PASSED",
+      "remote_readback": "All eight reviewed changed blobs and their modes match the tested tree; all other parent blobs preserved",
+      "tests": "96 passed in3.34s on Python3.14.8; same distinct tests",
+      "additional_gates": "Fresh declared dependency installation, pip check, wheel/source archive build and installed CLI help passed",
+      "warning": "Torch warned that optional NumPy was not installed; all96 tests passed, no test skipped"
     }
   ],
   "decisions": [
@@ -61,8 +74,21 @@
   "compute_budget": "Local CPU only; no model generation or scientific training campaign",
   "protected_boundary": "No live provider interaction, external messaging, tools, paid job or protected evaluation",
   "remaining_blockers": [
-    "Hosted Python3.14 installation, test and package gates on the new source are pending and will be tracked in its draft PR",
     "Client bounds cannot control transport-internal or server allocations, guarantee a total wall-clock deadline, or certify immediate server cancellation",
     "Model qualification, independent capability evaluation and generative citation validation remain absent"
-  ]
+  ],
+  "published_pull_request": "https://github.com/build-the-future-11/hermes-local/pull/3",
+  "hosted_code_verification": {
+    "event": "Exact published code passed hosted verification",
+    "code_commit": "24e9ce2226759ece85a3651089ae6792eac64e03",
+    "pull_request": "https://github.com/build-the-future-11/hermes-local/pull/3",
+    "workflow_runs": {
+      "Standalone verification": 38029593834
+    },
+    "result": "PASSED",
+    "remote_readback": "All eight reviewed changed blobs and their modes match the tested tree; all other parent blobs preserved",
+    "tests": "96 passed in3.34s on Python3.14.8; same distinct tests",
+    "additional_gates": "Fresh declared dependency installation, pip check, wheel/source archive build and installed CLI help passed",
+    "warning": "Torch warned that optional NumPy was not installed; all96 tests passed, no test skipped"
+  }
 }
