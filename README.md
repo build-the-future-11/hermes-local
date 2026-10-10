@@ -47,8 +47,15 @@ An Ollama API address is not a chat website.
 - Explicit model selection and before/after digest checks; no silent fallback.
 - Bounded history with visible omission notices; conservative byte budgeting,
   not an exact tokenizer calculation.
-- Failed/incomplete streams are not saved to history. Displayed partial text must
-  be discarded on failure. Client disconnect does not certify immediate server cancellation.
+- Streaming and non-streaming answers require an explicit `done: true` receipt
+  with `done_reason: "stop"` or `"length"`. Missing or unsupported reasons fail
+  explicitly; a token limit remains visible as `length`.
+- Failed/incomplete responses are not saved to history. Final stream metadata is
+  checked before that event's text is displayed. Earlier displayed partial text
+  must be discarded on failure. Client disconnect does not certify immediate
+  server cancellation.
+- Response text is bounded to 1 MiB of UTF-8 bytes in both modes. Installed model
+  names must be unambiguous before their digests can identify a chat session.
 - No application conversation persistence or tool execution. Backend logging is separate.
 - Remote backend selection sends conversation contents there; HTTPS is required.
 - Chat answers are not document-verified and may be incorrect.

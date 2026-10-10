@@ -36,7 +36,7 @@ def test_chat_bounds_history_and_rejects_changed_model() -> None:
         if request.url.path == "/api/tags":
             return httpx.Response(200, json={"models": [{"name": "base", "digest": digest}]})
         return httpx.Response(200, json={"model": "base", "message": {"content": "x" * 80},
-                                        "done": True})
+                                        "done": True, "done_reason": "stop"})
 
     session = HermesChat(OllamaClient(transport=httpx.MockTransport(handle)), "base",
                          context_tokens=256, max_tokens=16)
