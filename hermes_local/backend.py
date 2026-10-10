@@ -4,7 +4,7 @@ import ipaddress
 import json
 import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlsplit
@@ -12,6 +12,83 @@ from urllib.parse import urlsplit
 import httpx
 
 from hermes_local.schemas import GenerationResult
+
+MAX_RESPONSE_BYTES = 16 * 1024 * 1024
+MAX_STREAM_RECORD_BYTES = 8 * 1024 * 1024
+MAX_STREAM_RECORDS = 16_384
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Ollama returned a duplicate JSON object key")
+        result[key] = value
+    return result
+
+
+def _finite_json_number(token: str) -> float:
+    value = float(token)
+    if not math.isfinite(value):
+        raise ValueError("Ollama returned a nonfinite JSON number")
+    return value
+
+
+def _reject_json_constant(token: str) -> Any:
+    raise ValueError("Ollama returned a nonstandard JSON number")
+
+
+def _parse_provider_object(raw: bytes | bytearray) -> dict[str, Any]:
+    try:
+        payload = json.loads(
+            raw.decode("utf-8"), object_pairs_hook=_unique_json_object,
+            parse_float=_finite_json_number, parse_constant=_reject_json_constant,
+        )
+    except (UnicodeDecodeError, RecursionError) as error:
+        raise ValueError("Ollama returned malformed UTF-8 JSON") from error
+    if not isinstance(payload, dict):
+        raise ValueError("Ollama returned a non-object response")
+    return payload
+
+
+def _bounded_response_bytes(response: httpx.Response) -> Iterator[bytes]:
+    # Identity avoids HTTPX decompressing a large body before our byte budget.
+    if response.headers.get("content-encoding", "identity").strip().lower() != "identity":
+        raise ValueError("Ollama response must use identity content encoding")
+    consumed = 0
+    for chunk in response.iter_bytes():
+        consumed += len(chunk)
+        if consumed > MAX_RESPONSE_BYTES:
+            raise ValueError("Ollama response exceeds the 16 MiB wire limit")
+        yield chunk
+
+
+def _stream_objects(response: httpx.Response) -> Iterator[dict[str, Any]]:
+    record = bytearray()
+    count = 0
+    for chunk in _bounded_response_bytes(response):
+        start = 0
+        while start < len(chunk):
+            end = chunk.find(b"\n", start)
+            stop = len(chunk) if end < 0 else end
+            if len(record) + stop - start > MAX_STREAM_RECORD_BYTES:
+                raise ValueError("Ollama stream record exceeds the 8 MiB wire limit")
+            record.extend(memoryview(chunk)[start:stop])
+            if end < 0:
+                break
+            count += 1
+            if count > MAX_STREAM_RECORDS:
+                raise ValueError("Ollama stream exceeds its record limit")
+            if record.strip(b" \t\r"):
+                yield _parse_provider_object(record)
+            record.clear()
+            start = end + 1
+    if record:
+        count += 1
+        if count > MAX_STREAM_RECORDS:
+            raise ValueError("Ollama stream exceeds its record limit")
+        if record.strip(b" \t\r"):
+            yield _parse_provider_object(record)
 
 
 @dataclass(slots=True)
@@ -57,13 +134,14 @@ class OllamaClient:
             timeout=self.timeout_seconds,
             transport=self.transport,
             trust_env=False,
+            headers={"Accept-Encoding": "identity"},
         ) as client:
-            response = client.request(method, path, **kwargs)
-            response.raise_for_status()
-            payload = response.json()
-        if not isinstance(payload, dict):
-            raise ValueError("Ollama returned a non-object response")
-        return payload
+            with client.stream(method, path, **kwargs) as response:
+                response.raise_for_status()
+                raw = bytearray()
+                for chunk in _bounded_response_bytes(response):
+                    raw.extend(chunk)
+                return _parse_provider_object(raw)
 
     def list_models(self) -> list[str]:
         payload = self._request("GET", "/api/tags")
@@ -248,14 +326,12 @@ class OllamaClient:
         chunks: list[str] = []
         size = 0
         with httpx.Client(base_url=self.base_url, timeout=self.timeout_seconds,
-                          transport=self.transport, trust_env=False) as client:
+                          transport=self.transport, trust_env=False,
+                          headers={"Accept-Encoding": "identity"}) as client:
             with client.stream("POST", "/api/chat", json=body) as response:
                 response.raise_for_status()
-                for line in response.iter_lines():
-                    if not line.strip():
-                        continue
-                    payload = json.loads(line)
-                    if not isinstance(payload, dict) or payload.get("model") != model:
+                for payload in _stream_objects(response):
+                    if payload.get("model") != model:
                         raise ValueError("stream model identity is missing or mismatched")
                     message = payload.get("message")
                     if ("error" in payload or not isinstance(message, dict)

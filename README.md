@@ -62,6 +62,23 @@ An Ollama API address is not a chat website.
 
 ## Full Hermes research source
 
+### Provider wire limits
+
+All provider responses now use a bounded UTF-8 JSON reader: at most 16 MiB per
+HTTP response, 8 MiB per streamed JSON record and 16,384 stream records including
+blank lines. The existing 1 MiB answer limit remains. The client requests identity
+content encoding and refuses compressed responses before reading their bodies.
+Duplicate keys, nonfinite JSON numbers and malformed UTF-8 are rejected before a
+record's text is emitted. LF, CRLF, split UTF-8 and a final record without a newline
+are supported. The finite budgets also cover unused metadata and unterminated lines.
+
+Handles close on completion or failure, and failed turns preserve existing
+conversation history. These are client buffering bounds, not a total time limit,
+server-cancellation guarantee or control over allocations inside an HTTP transport.
+See the [wire contract](research/WIRE_CAPTURE_CONTRACT_20261010.md),
+[verification receipt](research/WIRE_CAPTURE_VERIFICATION_20261010.json), and
+[canonical state](RESEARCH_STATE.json).
+
 `hermes_local/grounding.py` includes the extractive grounding service, trainable
 heads and workspace runtime. `substrate.py` and `core.py` supply their original
 typed support contracts. These are experimental components, not trained weights.

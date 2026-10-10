@@ -1,0 +1,315 @@
+{
+  "schema_version": "hermes-local.development-verification.v1",
+  "scope": "Instrumented offline HTTPX fixtures only; no live provider or scientific model qualification",
+  "base_commit": "e5475f01ac3aa2c9614c9440a89f9026749ea152",
+  "python": "3.12.14",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "environment": {
+    "PYTHONPATH": "/workspace/scratch/686cff45990b/deps/hermes-wave3:/workspace/scratch/686cff45990b/deps/torch-cpu",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1"
+  },
+  "new_pytest_cases": 38,
+  "inherited_pytest_cases": 58,
+  "source_sha256": {
+    "hermes_local/backend.py": "9bcae00b0b8b9ac40914d702986f26c9ab9efb06b8852e6c93714b4a37e8c425",
+    "tests/test_wire_capture.py": "9f48eb1c7751650beec4bc1ae2596b57270680e74781f62684654c55e90cbac6",
+    "research/WIRE_CAPTURE_CONTRACT_20261010.md": "31c82a7a550ba0ddd0a357b14058db232b68e6ee161aa4465b869133385601ee"
+  },
+  "commands": [
+    {
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": 0,
+      "stdout": "........................................................................ [ 75%]\n........................                                                 [100%]\n96 passed in 14.35s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "ruff",
+        "check",
+        "hermes_local/backend.py",
+        "tests/test_wire_capture.py"
+      ],
+      "exit_code": 0,
+      "stdout": "All checks passed!\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python",
+        "-c",
+        "import httpx,pydantic; print(\"httpx=\"+httpx.__version__+\", pydantic=\"+pydantic.__version__)"
+      ],
+      "exit_code": 0,
+      "stdout": "httpx=0.28.1, pydantic=2.14.0\n",
+      "stderr": ""
+    }
+  ],
+  "base_witness_command": {
+    "command": [
+      "python",
+      "-c",
+      "\nimport json,httpx\nfrom hermes_local import backend\nfrom hermes_local.backend import OllamaClient\nbase=b'{\"model\":\"base\",\"message\":{\"content\":\"answer\"},\"done\":true,\"done_reason\":\"stop\"}'\ncases=[\n ('duplicate_model',base.replace(b'\"model\":\"base\"',b'\"model\":\"other\",\"model\":\"base\"'),False,None),\n ('duplicate_done',base.replace(b'\"done\":true',b'\"done\":false,\"done\":true'),False,None),\n ('invalid_utf8',base.replace(b'answer',b'bad\\xffanswer'),True,None),\n ('nonfinite_metadata',base[:-1]+b',\"unknown\":NaN}',False,None),\n ('overflow_metadata',base[:-1]+b',\"unknown\":1e999}',False,None),\n ('ignored_oversize_metadata',base[:-1]+b',\"padding\":\"'+b'x'*1000+b'\"}',False,('MAX_RESPONSE_BYTES',128)),\n ('oversize_record',base+b' '*200,True,('MAX_STREAM_RECORD_BYTES',128)),\n ('blank_record_flood',b'\\n'*6+base,True,('MAX_STREAM_RECORDS',4)),\n ('ordinary_nonstream',base,False,None),('ordinary_stream',base,True,None),\n]\nobserved=[]\nfor name,raw,streaming,limit in cases:\n backend.MAX_RESPONSE_BYTES=16*1024*1024;backend.MAX_STREAM_RECORD_BYTES=8*1024*1024;backend.MAX_STREAM_RECORDS=16384\n if limit:setattr(backend,limit[0],limit[1])\n tokens=[]\n def handle(request): return httpx.Response(200,content=raw)\n row={'case':name,'streaming':streaming,'fixture_limit':limit,'wire_bytes':len(raw)}\n try:\n  result=OllamaClient(transport=httpx.MockTransport(handle)).generate(model='base',prompt='fixture',on_token=tokens.append if streaming else None)\n  row.update(accepted=True,content=result.content,finish_reason=result.finish_reason)\n except ValueError as exc:row.update(accepted=False,reason=str(exc))\n row['emitted']=tokens;observed.append(row)\nprint(json.dumps(observed,ensure_ascii=True,allow_nan=False))\n"
+    ],
+    "exit_code": 0,
+    "stderr": ""
+  },
+  "base_observations": [
+    {
+      "case": "duplicate_model",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 96,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": []
+    },
+    {
+      "case": "duplicate_done",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 93,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": []
+    },
+    {
+      "case": "invalid_utf8",
+      "streaming": true,
+      "fixture_limit": null,
+      "wire_bytes": 84,
+      "accepted": true,
+      "content": "bad\ufffdanswer",
+      "finish_reason": "stop",
+      "emitted": [
+        "bad\ufffdanswer"
+      ]
+    },
+    {
+      "case": "nonfinite_metadata",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 94,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": []
+    },
+    {
+      "case": "overflow_metadata",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 96,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": []
+    },
+    {
+      "case": "ignored_oversize_metadata",
+      "streaming": false,
+      "fixture_limit": [
+        "MAX_RESPONSE_BYTES",
+        128
+      ],
+      "wire_bytes": 1093,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": []
+    },
+    {
+      "case": "oversize_record",
+      "streaming": true,
+      "fixture_limit": [
+        "MAX_STREAM_RECORD_BYTES",
+        128
+      ],
+      "wire_bytes": 280,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": [
+        "answer"
+      ]
+    },
+    {
+      "case": "blank_record_flood",
+      "streaming": true,
+      "fixture_limit": [
+        "MAX_STREAM_RECORDS",
+        4
+      ],
+      "wire_bytes": 86,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": [
+        "answer"
+      ]
+    },
+    {
+      "case": "ordinary_nonstream",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 80,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": []
+    },
+    {
+      "case": "ordinary_stream",
+      "streaming": true,
+      "fixture_limit": null,
+      "wire_bytes": 80,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": [
+        "answer"
+      ]
+    }
+  ],
+  "candidate_witness_command": {
+    "command": [
+      "python",
+      "-c",
+      "\nimport json,httpx\nfrom hermes_local import backend\nfrom hermes_local.backend import OllamaClient\nbase=b'{\"model\":\"base\",\"message\":{\"content\":\"answer\"},\"done\":true,\"done_reason\":\"stop\"}'\ncases=[\n ('duplicate_model',base.replace(b'\"model\":\"base\"',b'\"model\":\"other\",\"model\":\"base\"'),False,None),\n ('duplicate_done',base.replace(b'\"done\":true',b'\"done\":false,\"done\":true'),False,None),\n ('invalid_utf8',base.replace(b'answer',b'bad\\xffanswer'),True,None),\n ('nonfinite_metadata',base[:-1]+b',\"unknown\":NaN}',False,None),\n ('overflow_metadata',base[:-1]+b',\"unknown\":1e999}',False,None),\n ('ignored_oversize_metadata',base[:-1]+b',\"padding\":\"'+b'x'*1000+b'\"}',False,('MAX_RESPONSE_BYTES',128)),\n ('oversize_record',base+b' '*200,True,('MAX_STREAM_RECORD_BYTES',128)),\n ('blank_record_flood',b'\\n'*6+base,True,('MAX_STREAM_RECORDS',4)),\n ('ordinary_nonstream',base,False,None),('ordinary_stream',base,True,None),\n]\nobserved=[]\nfor name,raw,streaming,limit in cases:\n backend.MAX_RESPONSE_BYTES=16*1024*1024;backend.MAX_STREAM_RECORD_BYTES=8*1024*1024;backend.MAX_STREAM_RECORDS=16384\n if limit:setattr(backend,limit[0],limit[1])\n tokens=[]\n def handle(request): return httpx.Response(200,content=raw)\n row={'case':name,'streaming':streaming,'fixture_limit':limit,'wire_bytes':len(raw)}\n try:\n  result=OllamaClient(transport=httpx.MockTransport(handle)).generate(model='base',prompt='fixture',on_token=tokens.append if streaming else None)\n  row.update(accepted=True,content=result.content,finish_reason=result.finish_reason)\n except ValueError as exc:row.update(accepted=False,reason=str(exc))\n row['emitted']=tokens;observed.append(row)\nprint(json.dumps(observed,ensure_ascii=True,allow_nan=False))\n"
+    ],
+    "exit_code": 0,
+    "stderr": ""
+  },
+  "candidate_observations": [
+    {
+      "case": "duplicate_model",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 96,
+      "accepted": false,
+      "reason": "Ollama returned a duplicate JSON object key",
+      "emitted": []
+    },
+    {
+      "case": "duplicate_done",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 93,
+      "accepted": false,
+      "reason": "Ollama returned a duplicate JSON object key",
+      "emitted": []
+    },
+    {
+      "case": "invalid_utf8",
+      "streaming": true,
+      "fixture_limit": null,
+      "wire_bytes": 84,
+      "accepted": false,
+      "reason": "Ollama returned malformed UTF-8 JSON",
+      "emitted": []
+    },
+    {
+      "case": "nonfinite_metadata",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 94,
+      "accepted": false,
+      "reason": "Ollama returned a nonstandard JSON number",
+      "emitted": []
+    },
+    {
+      "case": "overflow_metadata",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 96,
+      "accepted": false,
+      "reason": "Ollama returned a nonfinite JSON number",
+      "emitted": []
+    },
+    {
+      "case": "ignored_oversize_metadata",
+      "streaming": false,
+      "fixture_limit": [
+        "MAX_RESPONSE_BYTES",
+        128
+      ],
+      "wire_bytes": 1093,
+      "accepted": false,
+      "reason": "Ollama response exceeds the 16 MiB wire limit",
+      "emitted": []
+    },
+    {
+      "case": "oversize_record",
+      "streaming": true,
+      "fixture_limit": [
+        "MAX_STREAM_RECORD_BYTES",
+        128
+      ],
+      "wire_bytes": 280,
+      "accepted": false,
+      "reason": "Ollama stream record exceeds the 8 MiB wire limit",
+      "emitted": []
+    },
+    {
+      "case": "blank_record_flood",
+      "streaming": true,
+      "fixture_limit": [
+        "MAX_STREAM_RECORDS",
+        4
+      ],
+      "wire_bytes": 86,
+      "accepted": false,
+      "reason": "Ollama stream exceeds its record limit",
+      "emitted": []
+    },
+    {
+      "case": "ordinary_nonstream",
+      "streaming": false,
+      "fixture_limit": null,
+      "wire_bytes": 80,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": []
+    },
+    {
+      "case": "ordinary_stream",
+      "streaming": true,
+      "fixture_limit": null,
+      "wire_bytes": 80,
+      "accepted": true,
+      "content": "answer",
+      "finish_reason": "stop",
+      "emitted": [
+        "answer"
+      ]
+    }
+  ],
+  "independent_review": {
+    "reviewer": "wave3_methods",
+    "full_suite": "96 passed in 4.98s",
+    "additional_checks": "Four ReadError/HTTP500 probes confirm close-on-error, no callback on HTTP failure, and provisional partial streaming; inspected HTTPX0.28.1 identity iteration.",
+    "initial_environment_failure": "Reviewer default Python lacked httpx; collection could not execute until supplied isolated PYTHONPATH was used. Not a project-test failure.",
+    "outcome": "No concrete blocker in the declared wire-capture contract; no reviewer source edits"
+  }
+}

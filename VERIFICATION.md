@@ -19,6 +19,28 @@ Current limitations include unpinned dependency resolution, provisional streamed
 text, server cancellation uncertainty, conservative context budgeting and missing
 generative document citation validation. The proprietary license restricts use.
 
+## 10 October 2026 — bounded wire capture
+
+The separate wire-capture revision is based on completion-contract PR #2 at
+`e5475f01ac3aa2c9614c9440a89f9026749ea152`. Its original records above remain valid
+for their stated source scopes. The complete local Linux/Python 3.12.14 suite
+passes **96 cases: 58 inherited and 38 new**, using HTTPX 0.28.1 and Pydantic 2.14.0.
+All new provider checks use instrumented offline `MockTransport`/`SyncByteStream`.
+Configured Ruff checks and patch whitespace checks pass.
+
+Independent review repeated all 96 cases and tested four HTTP error/ReadError
+closure paths. It inspected HTTPX's identity iteration to verify bounds precede
+application accumulation and transparent decompression. Its initial default-Python
+collection lacked HTTPX; the supplied isolated dependency path resolved this
+environment issue. No project assertion was weakened. No new model generation,
+training campaign, live provider endpoint or scientific result was executed.
+
+The retained [machine-readable receipt](research/WIRE_CAPTURE_VERIFICATION_20261010.json)
+includes source hashes, exact commands, full outputs, parent counterexamples and
+passing controls. Hosted checks on the new published source are tracked in its
+draft PR; local Python 3.12 execution alone does not certify the declared Python
+3.14 packaging path.
+
 ## Provider completion contract — 2026-10-10
 
 The original non-streaming client accepted `done: false` as a completed

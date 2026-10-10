@@ -1,0 +1,94 @@
+{
+  "schema_version": "hermes-local.research-state.v1",
+  "repository": "build-the-future-11/hermes-local",
+  "read_order": [
+    "RESEARCH_STATE.json",
+    "README.md",
+    "VERIFICATION.md",
+    "research/WIRE_CAPTURE_CONTRACT_20261010.md"
+  ],
+  "question": "Can an explicitly selected local model integration retain reliable completion and grounding contracts without silently promoting malformed provider responses?",
+  "contribution_scope": "Experimental local assistant integration and extractive grounding components, not a trained Hermes 12B release",
+  "phase": "DEVELOPMENT_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED",
+  "research_complete_verified": false,
+  "parent_revision": "e5475f01ac3aa2c9614c9440a89f9026749ea152",
+  "history": [
+    {
+      "event": "Standalone extraction",
+      "source": "VERIFICATION.md",
+      "scope": "10 earlier local macOS/Python 3.14 checks; no weights or standalone capability benchmark"
+    },
+    {
+      "event": "Draft PR #2 provider completion contract",
+      "head": "e5475f01ac3aa2c9614c9440a89f9026749ea152",
+      "scope": "58 Linux/Python 3.12 local tests including 48 new provider receipt cases; prior base produced 35 failures and 13 passing controls"
+    },
+    {
+      "event": "2026-10-10 prospective bounded wire capture contract",
+      "source": "research/WIRE_CAPTURE_CONTRACT_20261010.md"
+    },
+    {
+      "event": "2026-10-10 wire-capture implementation independently verified",
+      "receipt": "research/WIRE_CAPTURE_VERIFICATION_20261010.json",
+      "receipt_sha256": "518523566508587681f9992aacf4e189e06167e57201fac25f5d548f819839d9",
+      "source_sha256": {
+        "hermes_local/backend.py": "9bcae00b0b8b9ac40914d702986f26c9ab9efb06b8852e6c93714b4a37e8c425",
+        "tests/test_wire_capture.py": "9f48eb1c7751650beec4bc1ae2596b57270680e74781f62684654c55e90cbac6",
+        "research/WIRE_CAPTURE_CONTRACT_20261010.md": "31c82a7a550ba0ddd0a357b14058db232b68e6ee161aa4465b869133385601ee"
+      },
+      "tests": {
+        "total": 96,
+        "new": 38,
+        "inherited": 58
+      },
+      "review": "wave3_methods independently repeated 96 tests and four HTTP-error/ReadError closure probes"
+    },
+    {
+      "event": "Exact published code passed hosted verification",
+      "code_commit": "24e9ce2226759ece85a3651089ae6792eac64e03",
+      "pull_request": "https://github.com/build-the-future-11/hermes-local/pull/3",
+      "workflow_runs": {
+        "Standalone verification": 38029593834
+      },
+      "result": "PASSED",
+      "remote_readback": "All eight reviewed changed blobs and their modes match the tested tree; all other parent blobs preserved",
+      "tests": "96 passed in3.34s on Python3.14.8; same distinct tests",
+      "additional_gates": "Fresh declared dependency installation, pip check, wheel/source archive build and installed CLI help passed",
+      "warning": "Torch warned that optional NumPy was not installed; all96 tests passed, no test skipped"
+    }
+  ],
+  "decisions": [
+    "Retain explicit model selection and digest identity",
+    "Preserve parent response completion checks and 1 MiB answer limit",
+    "Never save failed or incomplete turns",
+    "Keep extractive grounding independent of generative chat"
+  ],
+  "failures": [
+    "Response JSON and streamed lines were fully buffered before answer size checks",
+    "Duplicate JSON keys could silently replace provider model or completion identity",
+    "Default provider decoder allowed nonfinite values and replacement decoding of invalid UTF-8",
+    "Initial default Python lacked httpx and could not collect provider tests; isolated declared dependencies installed for tests",
+    "Initial configured Ruff check found import ordering and four test line lengths; corrected without behavioral changes"
+  ],
+  "development_budget": "Bounded deterministic local mock-transport fixtures and the existing unit suite",
+  "compute_budget": "Local CPU only; no model generation or scientific training campaign",
+  "protected_boundary": "No live provider interaction, external messaging, tools, paid job or protected evaluation",
+  "remaining_blockers": [
+    "Client bounds cannot control transport-internal or server allocations, guarantee a total wall-clock deadline, or certify immediate server cancellation",
+    "Model qualification, independent capability evaluation and generative citation validation remain absent"
+  ],
+  "published_pull_request": "https://github.com/build-the-future-11/hermes-local/pull/3",
+  "hosted_code_verification": {
+    "event": "Exact published code passed hosted verification",
+    "code_commit": "24e9ce2226759ece85a3651089ae6792eac64e03",
+    "pull_request": "https://github.com/build-the-future-11/hermes-local/pull/3",
+    "workflow_runs": {
+      "Standalone verification": 38029593834
+    },
+    "result": "PASSED",
+    "remote_readback": "All eight reviewed changed blobs and their modes match the tested tree; all other parent blobs preserved",
+    "tests": "96 passed in3.34s on Python3.14.8; same distinct tests",
+    "additional_gates": "Fresh declared dependency installation, pip check, wheel/source archive build and installed CLI help passed",
+    "warning": "Torch warned that optional NumPy was not installed; all96 tests passed, no test skipped"
+  }
+}
