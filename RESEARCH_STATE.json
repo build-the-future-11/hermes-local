@@ -1,0 +1,21 @@
+{
+  "schema_version": "hermes-local.research-state.v1",
+  "repository": "build-the-future-11/hermes-local",
+  "read_order": ["RESEARCH_STATE.json", "README.md", "VERIFICATION.md", "research/WIRE_CAPTURE_CONTRACT_20261010.md"],
+  "question": "Can an explicitly selected local model integration retain reliable completion and grounding contracts without silently promoting malformed provider responses?",
+  "contribution_scope": "Experimental local assistant integration and extractive grounding components, not a trained Hermes 12B release",
+  "phase": "DEVELOPMENT_WIRE_CONTRACT_WRITTEN",
+  "research_complete_verified": false,
+  "parent_revision": "e5475f01ac3aa2c9614c9440a89f9026749ea152",
+  "history": [
+    {"event": "Standalone extraction", "source": "VERIFICATION.md", "scope": "10 earlier local macOS/Python 3.14 checks; no weights or standalone capability benchmark"},
+    {"event": "Draft PR #2 provider completion contract", "head": "e5475f01ac3aa2c9614c9440a89f9026749ea152", "scope": "58 Linux/Python 3.12 local tests including 48 new provider receipt cases; prior base produced 35 failures and 13 passing controls"},
+    {"event": "2026-10-10 prospective bounded wire capture contract", "source": "research/WIRE_CAPTURE_CONTRACT_20261010.md"}
+  ],
+  "decisions": ["Retain explicit model selection and digest identity", "Preserve parent response completion checks and 1 MiB answer limit", "Never save failed or incomplete turns", "Keep extractive grounding independent of generative chat"],
+  "failures": ["Response JSON and streamed lines were fully buffered before answer size checks", "Duplicate JSON keys could silently replace provider model or completion identity", "Default provider decoder allowed nonfinite values and replacement decoding of invalid UTF-8"],
+  "development_budget": "Bounded deterministic local mock-transport fixtures and the existing unit suite",
+  "compute_budget": "Local CPU only; no model generation or scientific training campaign",
+  "protected_boundary": "No live provider interaction, external messaging, tools, paid job or protected evaluation",
+  "remaining_blockers": ["Implementation and independent review pending", "Hosted verification of the exact new revision pending", "Model qualification, independent capability evaluation and generative citation validation remain absent"]
+}
